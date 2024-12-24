@@ -147,6 +147,9 @@
   <ItemGroup>
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="petrov_item.h" />
+    <ClInclude Include="petrov_shop.h" />
+    <ClInclude Include="petrov_used_item.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
@@ -156,6 +159,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="petrov_item.cpp" />
+    <ClCompile Include="petrov_shop.cpp" />
+    <ClCompile Include="petrov_used_item.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

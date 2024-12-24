@@ -71,6 +71,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="add_edit_dialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="add_edit_dialog.Designer.cs">
+      <DependentUpon>add_edit_dialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="edit_main.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -79,6 +85,9 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="add_edit_dialog.resx">
+      <DependentUpon>add_edit_dialog.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="edit_main.resx">
       <DependentUpon>edit_main.cs</DependentUpon>
     </EmbeddedResource>

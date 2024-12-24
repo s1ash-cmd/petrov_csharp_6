@@ -1,12 +1,7 @@
 ﻿#include "pch.h"
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/serialization.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/vector.hpp>
+#include "petrov_item.h"
+#include "petrov_used_item.h"
+#include "petrov_shop.h"
 
 #include <fstream>
 #include <sstream>
@@ -15,104 +10,119 @@
 #include <memory>
 #include <stdexcept>
 #include <iostream>
+#include <cstring>
 
 using namespace std;
 
-class item {
-public:
-	string name = "";
-	double weight = 0.0;
-	double width = 0.0;
-	double height = 0.0;
-	int price = 0;
-	bool stock = 0;
+struct item_struct {
+	char name[256];
+	double weight;
+	double width;
+	double height;
+	int price;
+	bool stock;
 
-	virtual ~item() = default;
-
-	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
-		ar& name;
-		ar& weight;
-		ar& width;
-		ar& height;
-		ar& price;
-		ar& stock;
-	}
+	int age;
+	double condition;
+	char description[256];
 };
 
-class used_item : public item {
-public:
-	int age = 0;
-	double condition = 0.0;
-	string description = "";
+shop s;
 
-	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
-		ar& boost::serialization::base_object<item>(*this);
-		ar& age;
-		ar& condition;
-		ar& description;
-	}
-};
+extern "C" __declspec(dllexport) void __stdcall shop_read(const char* filename) {
+	s.shop_read(filename);
+}
 
-class shop {
-public:
-	vector<shared_ptr<item>> items;
-
-	void items_read(const string& filename);
-
-};
-
-
-void shop::items_read(const string& filename) {
-	ifstream fin(filename);
-	if (!fin) {
-		cerr << "Невозможно открыть файл: " << filename << endl;
-		return;
-	}
-
-	try {
-		boost::archive::text_iarchive ia(fin);
-		ia >> items;
-	}
-	catch (const exception& e) {
-		cerr << "Ошибка чтения из файла: " << e.what() << endl;
-	}
-
-	fin.close();
+extern "C" __declspec(dllexport) const char* shop_write(const char* filePath) {
+	s.shop_write(filePath);
 }
 
 
+extern "C" __declspec(dllexport) void shop_get_item(item_struct& item_data, int id) {
+	if (id < 0 || id >= s.get_size()) return;
+	auto current_item = s.get(id);
 
-extern "C" __declspec(dllexport) const char* items_read(const char* filePath) {
-	static string result;  // Статическая строка для хранения результата
+	strcpy_s(item_data.name, current_item->get_name().c_str());
+	item_data.weight = current_item->get_weight();
+	item_data.width = current_item->get_width();
+	item_data.height = current_item->get_height();
+	item_data.price = current_item->get_price();
+	item_data.stock = current_item->get_stock();
 
-	shop s;
-	try {
-		s.items_read(filePath);
-
-		// Проверяем, что в контейнере есть товары
-		if (!s.items.empty()) {
-			result = "Первый товар: " + s.items[0]->name;  // Выводим название первого товара
-		}
-		else {
-			result = "Товары не найдены в файле.";
-		}
+	auto used_item_ptr = dynamic_pointer_cast<used_item>(current_item);
+	if (used_item_ptr) {
+		item_data.age = used_item_ptr->get_age();
+		item_data.condition = used_item_ptr->get_condition();
+		strcpy_s(item_data.description, used_item_ptr->get_description().c_str());
 	}
-	catch (const exception& e) {
-		result = "Ошибка: " + string(e.what());  // Возвращаем строку с ошибкой
-	}
-
-	return result.c_str();  // Возвращаем указатель на строку
 }
 
+extern "C" __declspec(dllexport) void __stdcall shop_update_item(const item_struct& item_data, int id) {
+	if (id < 0 || id >= s.get_size()) return;
 
+	auto current_item = s.get(id);
 
+	current_item->set_name(item_data.name);
+	current_item->set_weight(item_data.weight);
+	current_item->set_width(item_data.width);
+	current_item->set_height(item_data.height);
+	current_item->set_price(item_data.price);
+	current_item->set_stock(item_data.stock);
 
+	auto used_item_ptr = dynamic_pointer_cast<used_item>(current_item);
+	if (used_item_ptr) {
+		used_item_ptr->set_age(item_data.age);
+		used_item_ptr->set_condition(item_data.condition);
+		used_item_ptr->set_description(item_data.description);
+	}
+}
 
+extern "C" __declspec(dllexport) void __stdcall shop_add_item(const item_struct& item_data, int is_used) {
+	shared_ptr<item> new_item;
 
+	if (is_used == 1) { 
+		auto used_item_ptr = make_shared<used_item>();
 
+		used_item_ptr->set_name(item_data.name);
+		used_item_ptr->set_weight(item_data.weight);
+		used_item_ptr->set_width(item_data.width);
+		used_item_ptr->set_height(item_data.height);
+		used_item_ptr->set_price(item_data.price);
+		used_item_ptr->set_stock(item_data.stock);
+		used_item_ptr->set_age(item_data.age);
+		used_item_ptr->set_condition(item_data.condition);
+		used_item_ptr->set_description(item_data.description);
 
+		new_item = used_item_ptr;
+	}
+	else {
+		auto normal_item_ptr = make_shared<item>();
+
+		normal_item_ptr->set_name(item_data.name);
+		normal_item_ptr->set_weight(item_data.weight);
+		normal_item_ptr->set_width(item_data.width);
+		normal_item_ptr->set_height(item_data.height);
+		normal_item_ptr->set_price(item_data.price);
+		normal_item_ptr->set_stock(item_data.stock);
+
+		new_item = normal_item_ptr;
+	}
+
+	s.shop_add(new_item);
+}
+
+extern "C" __declspec(dllexport) int GetShopSize() {
+	return s.get_size();
+}
+
+extern "C" __declspec(dllexport) void ClearShop() {
+	s.clear();
+}
+
+extern "C" __declspec(dllexport) void shop_delete(int id)
+{
+	s.shop_delete(id);
+}
 
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
